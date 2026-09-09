@@ -80,8 +80,10 @@ def encode_user_groups_header(group_names: list[str]) -> str:
 
     Group names are free-form, so encoding keeps names holding a comma, a space,
     or non-ASCII characters intact — and splittable — inside one header value.
+    Names go out exactly as stored, without trimming or dropping any, so the
+    header describes the same membership as the JWT claim and the database.
     """
-    return ','.join(quote(name.strip(), safe='') for name in group_names if name and name.strip())
+    return ','.join(quote(name, safe='') for name in group_names)
 
 
 def _mint_forward_user_jwt(user: Any) -> str:

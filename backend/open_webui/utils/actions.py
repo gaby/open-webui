@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import Request
 from open_webui.env import ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
-from open_webui.models.users import UserModel
+from open_webui.models.users import UserModel, dump_user_params
 from open_webui.socket.main import get_event_call, get_event_emitter
 from open_webui.utils.middleware import process_tool_result
 from open_webui.utils.models import check_model_access, get_all_models
@@ -109,7 +109,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                     params[key] = value
 
             if '__user__' in sig.parameters:
-                __user__ = user.model_dump() if isinstance(user, UserModel) else {}
+                __user__ = dump_user_params(user) if isinstance(user, UserModel) else {}
 
                 try:
                     if hasattr(function_module, 'UserValves'):
