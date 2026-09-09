@@ -20,6 +20,7 @@ from open_webui.env import (
 )
 from open_webui.models.functions import FunctionModel, Functions
 from open_webui.models.tools import Tools
+from open_webui.models.users import dump_user_params
 
 log = logging.getLogger(__name__)
 
@@ -119,9 +120,9 @@ def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = 
                 # Prepare kwargs based on what the method accepts
                 kwargs = {}
                 if '__user__' in params and user is not None:
-                    kwargs['__user__'] = user.model_dump() if hasattr(user, 'model_dump') else user
+                    kwargs['__user__'] = dump_user_params(user)
                 if 'user' in params and user is not None:
-                    kwargs['user'] = user.model_dump() if hasattr(user, 'model_dump') else user
+                    kwargs['user'] = dump_user_params(user)
 
                 resolved_options = method(**kwargs) if kwargs else method()
 

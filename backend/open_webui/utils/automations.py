@@ -38,6 +38,7 @@ from open_webui.models.folders import Folders
 from open_webui.models.messages import MessageForm
 from open_webui.models.users import Users
 from open_webui.utils.auth import create_token
+from open_webui.utils.headers import resolve_user_group_names
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.task import prompt_template
 from open_webui.utils.terminals import get_terminal_server_url
@@ -495,7 +496,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     (filters, model params, knowledge/RAG, tools, DB saves, webhooks).
     """
     try:
-        user = await Users.get_user_by_id(automation.user_id)
+        user = await resolve_user_group_names(await Users.get_user_by_id(automation.user_id))
         if not user:
             await _record_run(automation.id, 'error', error='User not found')
             await publish_event(

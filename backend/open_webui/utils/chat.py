@@ -11,7 +11,7 @@ from fastapi import HTTPException, Request, status
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.functions import generate_function_chat_completion
 from open_webui.models.models import Models
-from open_webui.models.users import UserModel
+from open_webui.models.users import UserModel, dump_user_params
 from open_webui.routers.ollama import (
     generate_chat_completion as generate_ollama_chat_completion,
 )
@@ -364,7 +364,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     extra_params = {
         '__event_emitter__': await get_event_emitter(metadata),
         '__event_call__': await get_event_call(metadata),
-        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+        '__user__': dump_user_params(user) if isinstance(user, UserModel) else {},
         '__metadata__': metadata,
         '__request__': request,
         '__model__': model,
