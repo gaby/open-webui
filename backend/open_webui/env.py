@@ -983,8 +983,16 @@ FORWARD_USER_INFO_HEADER_USER_NAME = os.getenv('FORWARD_USER_INFO_HEADER_USER_NA
 FORWARD_USER_INFO_HEADER_USER_ID = os.getenv('FORWARD_USER_INFO_HEADER_USER_ID', 'X-OpenWebUI-User-Id')
 FORWARD_USER_INFO_HEADER_USER_EMAIL = os.getenv('FORWARD_USER_INFO_HEADER_USER_EMAIL', 'X-OpenWebUI-User-Email')
 FORWARD_USER_INFO_HEADER_USER_ROLE = os.getenv('FORWARD_USER_INFO_HEADER_USER_ROLE', 'X-OpenWebUI-User-Role')
+FORWARD_USER_INFO_HEADER_USER_GROUPS = os.getenv('FORWARD_USER_INFO_HEADER_USER_GROUPS', 'X-OpenWebUI-User-Groups')
 FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id')
 FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
+
+# Forward the groups the user belongs to alongside the other user-info headers.
+# Opt-in on top of ENABLE_FORWARD_USER_INFO_HEADERS because it costs one extra
+# membership lookup per authenticated request. Every group Open WebUI knows the
+# user by is included, so groups synced from LDAP (ENABLE_LDAP_GROUP_MANAGEMENT),
+# OAuth/OIDC, SCIM, and trusted-header auth are forwarded too.
+ENABLE_FORWARD_USER_INFO_GROUPS = os.getenv('ENABLE_FORWARD_USER_INFO_GROUPS', 'False').lower() == 'true'
 
 # If set while ENABLE_FORWARD_USER_INFO_HEADERS is True, send one signed HS256 JWT
 # (FORWARD_USER_INFO_HEADER_JWT) instead of separate X-OpenWebUI-User-* headers.

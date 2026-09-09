@@ -49,7 +49,7 @@ from open_webui.models.folders import Folders
 from open_webui.models.models import Models
 from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import UserModel, Users, dump_user_params
 from open_webui.retrieval.utils import get_sources_from_items
 from open_webui.routers.images import (
     CreateImageForm,
@@ -2490,7 +2490,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     extra_params = {
         '__event_emitter__': event_emitter,
         '__event_call__': event_caller,
-        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+        '__user__': dump_user_params(user) if isinstance(user, UserModel) else {},
         '__metadata__': metadata,
         '__oauth_token__': await get_system_oauth_token(request, user),
         '__request__': request,
@@ -3397,7 +3397,7 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
                     extra_params={
                         '__event_emitter__': event_emitter,
                         '__event_call__': event_caller,
-                        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+                        '__user__': dump_user_params(user) if isinstance(user, UserModel) else {},
                         '__metadata__': metadata,
                         '__oauth_token__': await get_system_oauth_token(request, user),
                         '__request__': request,
@@ -3957,7 +3957,7 @@ async def outlet_filter_handler(ctx):
         extra_params = {
             '__event_emitter__': event_emitter,
             '__event_call__': event_caller,
-            '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+            '__user__': dump_user_params(user) if isinstance(user, UserModel) else {},
             '__metadata__': metadata,
             '__request__': request,
             '__model__': model,
@@ -4252,7 +4252,7 @@ async def streaming_chat_response_handler(response, ctx):
     extra_params = {
         '__event_emitter__': event_emitter,
         '__event_call__': event_caller,
-        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+        '__user__': dump_user_params(user) if isinstance(user, UserModel) else {},
         '__metadata__': metadata,
         '__oauth_token__': await get_system_oauth_token(request, user),
         '__request__': request,

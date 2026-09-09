@@ -5,10 +5,13 @@ from urllib.parse import quote
 
 import jwt
 from open_webui.env import (
+    ENABLE_FORWARD_USER_INFO_GROUPS,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_USER_INFO_HEADER_JWT,
     FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS,
     FORWARD_USER_INFO_HEADER_JWT_SECRET,
     FORWARD_USER_INFO_HEADER_USER_EMAIL,
+    FORWARD_USER_INFO_HEADER_USER_GROUPS,
     FORWARD_USER_INFO_HEADER_USER_ID,
     FORWARD_USER_INFO_HEADER_USER_NAME,
     FORWARD_USER_INFO_HEADER_USER_ROLE,
@@ -33,6 +36,56 @@ def get_json_bearer_headers(token: Any = '') -> dict[str, str]:
     return {'Content-Type': 'application/json', **bearer_auth_header(token)}
 
 
+async def resolve_user_group_names(user: Optional[Any] = None) -> Optional[Any]:
+    """Cache the names of the groups ``user`` belongs to on the user model.
+
+    ``include_user_info_headers`` is synchronous and runs from sync call sites
+    (web search, document loaders, rerankers) that cannot await a membership
+    query, so the lookup happens once in the authentication layer while we are
+    still in async context.  Every group Open WebUI holds for the user is
+    covered, including those synced from LDAP, OAuth/OIDC, SCIM, and
+    trusted-header auth.  Returns ``user`` so callers can chain the call.
+    """
+    if user is None or not (ENABLE_FORWARD_USER_INFO_HEADERS and ENABLE_FORWARD_USER_INFO_GROUPS):
+        return user
+
+    if getattr(user, 'group_names', None) is not None:
+        return user
+
+    try:
+        groups = await Groups.get_groups_by_member_id(user.id)
+        user.group_names = [group.name for group in groups]
+    except Exception:
+        log.exception('Failed to resolve group membership for user %s', getattr(user, 'id', None))
+
+    return user
+
+
+def get_forwarded_user_group_names(user: Optional[Any] = None) -> Optional[list[str]]:
+    """Group names to forward for ``user``, or None when there are none to forward.
+
+    None means "nothing to say" — forwarding is disabled, or the user was never
+    run through :func:`resolve_user_group_names` — and the group header is then
+    left off entirely.  An empty list is a real answer: the user is in no group.
+    """
+    if user is None or not ENABLE_FORWARD_USER_INFO_GROUPS:
+        return None
+
+    group_names = getattr(user, 'group_names', None)
+    return list(group_names) if group_names is not None else None
+
+
+def encode_user_groups_header(group_names: list[str]) -> str:
+    """Percent-encode each group name and join on ",".
+
+    Group names are free-form, so encoding keeps names holding a comma, a space,
+    or non-ASCII characters intact — and splittable — inside one header value.
+    Names go out exactly as stored, without trimming or dropping any, so the
+    header describes the same membership as the JWT claim and the database.
+    """
+    return ','.join(quote(name, safe='') for name in group_names)
+
+
 def _mint_forward_user_jwt(user: Any) -> str:
     now = int(time.time())
     payload = {
@@ -44,6 +97,11 @@ def _mint_forward_user_jwt(user: Any) -> str:
         'iat': now,
         'exp': now + FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS,
     }
+
+    group_names = get_forwarded_user_group_names(user)
+    if group_names is not None:
+        payload['groups'] = group_names
+
     return jwt.encode(payload, FORWARD_USER_INFO_HEADER_JWT_SECRET, algorithm='HS256')
 
 
@@ -66,13 +124,18 @@ def include_user_info_headers(headers: dict, user: Optional[Any] = None) -> dict
                 FORWARD_USER_INFO_HEADER_JWT,
             )
 
-    return {
-        **headers,
+    user_info_headers = {
         FORWARD_USER_INFO_HEADER_USER_NAME: quote(user.name.strip(), safe=' '),
         FORWARD_USER_INFO_HEADER_USER_ID: user.id,
         FORWARD_USER_INFO_HEADER_USER_EMAIL: user.email.strip(),
         FORWARD_USER_INFO_HEADER_USER_ROLE: user.role,
     }
+
+    group_names = get_forwarded_user_group_names(user)
+    if group_names is not None:
+        user_info_headers[FORWARD_USER_INFO_HEADER_USER_GROUPS] = encode_user_groups_header(group_names)
+
+    return {**headers, **user_info_headers}
 
 
 def custom_headers_require_user_groups(custom_headers: Optional[dict]) -> bool:

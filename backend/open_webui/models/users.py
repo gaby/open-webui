@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import throttle
@@ -205,6 +205,12 @@ class UserModel(BaseModel):
     variables: dict = Field(default_factory=dict, exclude=True)
     settings: UserSettings | None = None
 
+    # Names of the groups this user belongs to, filled in by the auth layer when
+    # group forwarding is enabled (see utils.headers.resolve_user_group_names).
+    # It is not a column: `None` means "never resolved", `[]` means "no groups".
+    # Never serialized back to clients.
+    group_names: list[str] | None = Field(default=None, exclude=True)
+
     oauth: dict | None = None
     scim: dict | None = None
 
@@ -228,6 +234,24 @@ class UserModel(BaseModel):
     @classmethod
     def normalize_variables(cls, value):
         return value if isinstance(value, dict) else {}
+
+
+def dump_user_params(user: Any) -> Any:
+    """Serialize a user for the ``__user__``/``user`` payload passed to tools, filters and pipes.
+
+    ``UserModel.group_names`` is excluded from ``model_dump()`` so it never reaches
+    API responses, but builtin tools rebuild a ``UserModel`` out of this payload —
+    carry the group names explicitly so the rebuilt user can still forward them.
+    Anything without ``model_dump()`` is passed through untouched.
+    """
+    if not hasattr(user, 'model_dump'):
+        return user
+
+    params = user.model_dump()
+    group_names = getattr(user, 'group_names', None)
+    if group_names is not None:
+        params['group_names'] = group_names
+    return params
 
 
 class UserStatusModel(UserModel):

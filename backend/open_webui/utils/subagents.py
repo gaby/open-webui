@@ -15,6 +15,7 @@ from open_webui.models.config import Config
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import create_token
+from open_webui.utils.headers import resolve_user_group_names
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from sqlalchemy import select
@@ -83,7 +84,7 @@ async def process_pending_internal_messages(
         if await has_active_tasks(source_request.app.state.redis, parent_chat_id):
             return
 
-        user = await Users.get_user_by_id(user_id)
+        user = await resolve_user_group_names(await Users.get_user_by_id(user_id))
         if not user:
             return
 

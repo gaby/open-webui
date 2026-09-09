@@ -39,6 +39,7 @@ from open_webui.models.auths import Auths
 from open_webui.models.config import Config
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.headers import resolve_user_group_names
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import parse_duration
 from pytz import UTC
@@ -435,6 +436,8 @@ async def get_current_user(
                 # Fire-and-forget via asyncio.create_task to avoid blocking
                 asyncio.create_task(Users.update_last_active_by_id(user.id))
 
+                await resolve_user_group_names(user)
+
             # Scope-backed, so outer middleware (audit) can reuse the resolved user
             request.state.user = user
             return user
@@ -513,6 +516,7 @@ async def get_current_user_by_api_key(request, api_key: str):
             current_span.set_attribute('client.auth.type', 'api_key')
 
     await Users.update_last_active_by_id(user.id)
+    await resolve_user_group_names(user)
     return user
 
 
@@ -538,7 +542,7 @@ async def get_verified_user_by_token(token: str, redis=None):
     if user is None or user.role not in VERIFIED_USER_ROLES:
         return None
 
-    return user
+    return await resolve_user_group_names(user)
 
 
 async def get_verified_user_by_id(user_id: str | None):
@@ -549,7 +553,7 @@ async def get_verified_user_by_id(user_id: str | None):
     if user is None or user.role not in VERIFIED_USER_ROLES:
         return None
 
-    return user
+    return await resolve_user_group_names(user)
 
 
 async def get_optional_verified_user_from_request(request: Request):

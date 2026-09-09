@@ -22,7 +22,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
-from open_webui.models.users import UserModel
+from open_webui.models.users import UserModel, dump_user_params
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
@@ -274,7 +274,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         '__task__': __task__,
         '__task_body__': __task_body__,
         '__files__': files,
-        '__user__': user.model_dump() if isinstance(user, UserModel) else {},
+        '__user__': dump_user_params(user) if isinstance(user, UserModel) else {},
         '__metadata__': metadata,
         '__oauth_token__': oauth_token,
         '__request__': request,
